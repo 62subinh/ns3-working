@@ -1,0 +1,4 @@
+__pycache__/
+cmake-cache/
+ns-3.37/build/
+bake/
