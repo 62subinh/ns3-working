@@ -1,4 +1,6 @@
 __pycache__/
 cmake-cache/
+build/
+.vscode/
 ns-3.37/build/
 bake/

@@ -11,7 +11,8 @@
                 "_UNICODE"
             ],
             "cStandard": "gnu17",
-            "cppStandard": "gnu++14"
+            "cppStandard": "gnu++14",
+            "compileCommands": "${workspaceFolder}/ns-3.37/cmake-cache/compile_commands.json"
         }
     ],
     "version": 4
