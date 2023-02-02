@@ -169,13 +169,13 @@ main(int argc, char* argv[])
     // LogComponentEnable ("A3RsrpHandoverAlgorithm", logLevel);
 
     // Basic settings & mobility
-    uint16_t numberOfUes = 1;
+    uint16_t numberOfUes = 2;
     uint16_t numberOfEnbs = 2;
-    uint16_t numBearersPerUe = 0;
+    uint16_t numBearersPerUe = 1;
     double distance = 500.0;                                        // m
-    double yForUe = 500.0;                                          // m
+    double yForUe = 450.0;                                          // m
     double speed = 20;                                              // m/s
-    double simTime = (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+    double simTime = (double)(numberOfEnbs - 1) * distance / speed;
     double enbTxPowerDbm = 46.0;
 
     // TCP settings
@@ -248,14 +248,13 @@ main(int argc, char* argv[])
     /*
      * Network topology:
      *
-     *      |     + --------------------------------------------------------->
-     *      |     UE
+     *      |     + ------------------>
+     *      |     UEs
      *      |
-     *      |               d                   d                   d
-     *    y |     |-------------------x-------------------x-------------------
-     *      |     |                 eNodeB              eNodeB
+     *      |               d          
+     *    y |     x-------------------x
+     *      |  eNodeB               eNodeB
      *      |   d |
-     *      |     |
      *      |     |                                             d = distance
      *            o (0, 0, 0)                                   y = yForUe
      */
@@ -269,7 +268,7 @@ main(int argc, char* argv[])
     Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator>();
     for (uint16_t i = 0; i < numberOfEnbs; i++)
     {
-        Vector enbPosition(distance * (i + 1), distance, 0);
+        Vector enbPosition(distance * i, distance, 0);
         enbPositionAlloc->Add(enbPosition);
     }
     MobilityHelper enbMobility;
@@ -281,8 +280,11 @@ main(int argc, char* argv[])
     MobilityHelper ueMobility;
     ueMobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
     ueMobility.Install(ueNodes);
-    ueNodes.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(0, yForUe, 0));
-    ueNodes.Get(0)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector(speed, 0, 0));
+    for (uint16_t i = 0; i < numberOfUes; i++)
+    {
+        ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(0, yForUe, 0));
+        ueNodes.Get(i)->GetObject<ConstantVelocityMobilityModel>()->SetVelocity(Vector(speed, 0, 0));
+    }
 
     // Install LTE Devices in eNB and UEs
     Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(enbTxPowerDbm));
@@ -358,7 +360,6 @@ main(int argc, char* argv[])
             Time startTime = Seconds(startTimeSeconds->GetValue());
             serverApps.Start(startTime);
             clientApps.Start(startTime);
-
         } // end for b
     }
 
@@ -394,6 +395,26 @@ main(int argc, char* argv[])
                     MakeCallback(&NotifyHandoverEndOkEnb));
     Config::Connect("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
                     MakeCallback(&NotifyHandoverEndOkUe));
+
+    // Create a new directory to store the output of the program
+    time_t rawtime;
+    struct tm* timeinfo;
+    char buffer[80];
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buffer, sizeof(buffer), "%d-%m-%Y-%I-%M-%S", timeinfo);
+    std::string currentTime(buffer);
+
+    dir = "results/" + currentTime + "/";
+    std::string dirToSave = "mkdir -p " + dir;
+    if (system(dirToSave.c_str()) == -1)
+    {
+        exit(1);
+    }
+
+    FlowMonitorHelper flowmon;
+    Ptr<FlowMonitor> monitor = flowmon.InstallAll();
+    Simulator::Schedule(Seconds(0 + 0.000001), &TraceThroughput, monitor);
 
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
